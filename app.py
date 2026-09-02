@@ -1,56 +1,89 @@
 import streamlit as st
+import json
+import os
 
 st.set_page_config(page_title="My Dynamic Tools Portal", layout="wide")
 
-st.title("🛠️ My Utility Tools Dashboard")
-st.write("Yahan aap apne naye tools add kar sakte hain aur unhe direct access kar sakte hain.")
+# Static Credentials
+VALID_USER_ID = "VMPL"
+VALID_PASSWORD = "VMPL@123"
 
-# Session state initialize kar rahe hain taaki naye added links save rahein
+DATA_FILE = "tools_data.json"
+
+# Function to load stored tools from JSON file
+def load_tools():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+# Function to save tools to JSON file
+def save_tools(tools):
+    with open(DATA_FILE, "w") as f:
+        json.dump(tools, f, indent=4)
+
+# Initialize Session State
 if "tools_list" not in st.session_state:
-    # Default tools list
-    st.session_state.tools_list = [
-        {
-            "name": "Brand to PPT Generator", 
-            "url": "https://share.streamlit.io/", 
-            "desc": "Convert brand guidelines into PPT"
-        },
-        {
-            "name": "Duplicate Image Finder", 
-            "url": "https://share.streamlit.io/", 
-            "desc": "Find and remove duplicate images"
-        }
-    ]
+    st.session_state.tools_list = load_tools()
 
-# --- SIDEBAR: Manual Input Form ---
-st.sidebar.header("➕ Add New Tool Link")
+if "is_logged_in" not in st.session_state:
+    st.session_state.is_logged_in = False
 
-with st.sidebar.form("add_tool_form", clear_on_submit=True):
-    tool_name = st.text_input("Tool ka Naam (Name):")
-    tool_url = st.text_input("Tool ka Link (URL):")
-    tool_desc = st.text_area("Ye Link kya kaam karta hai (Description):")
+st.title("🛠️ My Utility Tools Dashboard")
+st.write("Yahan se aap sabhi utility tools ko ek hi jagah access kar sakte hain.")
+
+# --- SIDEBAR: Login & Admin Controls ---
+st.sidebar.header("🔒 Admin Panel")
+
+if not st.session_state.is_logged_in:
+    user_id_input = st.sidebar.text_input("User ID")
+    password_input = st.sidebar.text_input("Password", type="password")
     
-    submit_button = st.form_submit_button("Dashboard me Add Karein")
-
-    if submit_button:
-        if tool_name and tool_url:
-            # New tool ko list me append karna
-            new_tool = {
-                "name": tool_name,
-                "url": tool_url,
-                "desc": tool_desc if tool_desc else "No description provided."
-            }
-            st.session_state.tools_list.append(new_tool)
-            st.sidebar.success(f"'{tool_name}' Dashboard me add ho gaya!")
+    if st.sidebar.button("Login"):
+        if user_id_input == VALID_USER_ID and password_input == VALID_PASSWORD:
+            st.session_state.is_logged_in = True
+            st.sidebar.success("Logged in successfully!")
+            st.rerun()
         else:
-            st.sidebar.error("Kripya Naam aur Link dono bharein!")
+            st.sidebar.error("Galat User ID ya Password!")
+else:
+    st.sidebar.success(f"Welcome, {VALID_USER_ID}!")
+    if st.sidebar.button("Logout"):
+        st.session_state.is_logged_in = False
+        st.rerun()
+
+    st.sidebar.subheader("➕ Add New Tool Link")
+
+    with st.sidebar.form("add_tool_form", clear_on_submit=True):
+        tool_name = st.text_input("Tool ka Naam (Name):")
+        tool_url = st.text_input("Tool ka Link (URL):")
+        tool_desc = st.text_area("Ye Link kya kaam karta hai (Description):")
+        
+        submit_button = st.form_submit_button("Dashboard me Add Karein")
+
+        if submit_button:
+            if tool_name and tool_url:
+                new_tool = {
+                    "name": tool_name,
+                    "url": tool_url,
+                    "desc": tool_desc if tool_desc else "No description provided."
+                }
+                st.session_state.tools_list.append(new_tool)
+                save_tools(st.session_state.tools_list)
+                st.sidebar.success(f"'{tool_name}' Dashboard me add ho gaya!")
+                st.rerun()
+            else:
+                st.sidebar.error("Kripya Naam aur Link dono bharein!")
 
 # --- MAIN DASHBOARD DISPLAY ---
 st.divider()
 
 if not st.session_state.tools_list:
-    st.info("Abhi koi tool add nahi hai. Sidebar se naya tool add karein.")
+    st.info("Abhi koi tool add nahi hai.")
 else:
-    # Cards layout using columns
     cols = st.columns(2)
     for index, tool in enumerate(st.session_state.tools_list):
         col = cols[index % 2]
