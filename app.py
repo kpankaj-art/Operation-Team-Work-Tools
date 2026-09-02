@@ -4,6 +4,26 @@ import os
 
 st.set_page_config(page_title="Utility Tools Portal", layout="wide")
 
+# Custom CSS to reduce top padding and space
+st.markdown("""
+    <style>
+        .block-container {
+            padding-top: 1.5rem !important;
+            padding-bottom: 0rem !important;
+        }
+        .custom-title {
+            font-size: 20px !important;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .custom-sub {
+            font-size: 13px !important;
+            color: #888;
+            margin-bottom: 10px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # Static Credentials
 VALID_USER_ID = "VMPL"
 VALID_PASSWORD = "VMPL@123"
@@ -35,9 +55,10 @@ if "is_logged_in" not in st.session_state:
 if "editing_index" not in st.session_state:
     st.session_state.editing_index = None
 
-# Compact Title Header
-st.markdown("### 🛠️ Utility Tools Dashboard")
-st.caption("Access all internal utility tools in one place.")
+# Compact & Low-Space Header
+st.markdown('<div class="custom-title">🛠️ Utility Tools Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="custom-sub">Access all internal utility tools in one place.</div>', unsafe_allow_html=True)
+st.divider()
 
 # --- SIDEBAR: Login & Admin Controls ---
 st.sidebar.header("🔒 Admin Panel")
@@ -69,7 +90,6 @@ else:
         with st.sidebar.form("edit_tool_form"):
             tool_name = st.text_input("Tool Name:", value=current_tool["name"])
             tool_url = st.text_input("Tool URL:", value=current_tool["url"])
-            tool_desc = st.text_area("Details:", value=current_tool.get("desc", ""))
             
             update_button = st.form_submit_button("Update Tool")
 
@@ -77,8 +97,7 @@ else:
                 if tool_name and tool_url:
                     st.session_state.tools_list[edit_idx] = {
                         "name": tool_name,
-                        "url": tool_url,
-                        "desc": tool_desc
+                        "url": tool_url
                     }
                     save_tools(st.session_state.tools_list)
                     st.session_state.editing_index = None
@@ -97,7 +116,6 @@ else:
         with st.sidebar.form("add_tool_form", clear_on_submit=True):
             tool_name = st.text_input("Tool Name:")
             tool_url = st.text_input("Tool URL:")
-            tool_desc = st.text_area("Details:")
             
             submit_button = st.form_submit_button("Add to Dashboard")
 
@@ -105,8 +123,7 @@ else:
                 if tool_name and tool_url:
                     new_tool = {
                         "name": tool_name,
-                        "url": tool_url,
-                        "desc": tool_desc
+                        "url": tool_url
                     }
                     st.session_state.tools_list.append(new_tool)
                     save_tools(st.session_state.tools_list)
@@ -116,8 +133,6 @@ else:
                     st.sidebar.error("Please fill in both Name and URL fields!")
 
 # --- MAIN DASHBOARD DISPLAY ---
-st.divider()
-
 if not st.session_state.tools_list:
     st.info("No tools added yet. Log in via the sidebar to add new links.")
 else:
@@ -127,8 +142,6 @@ else:
         with col:
             with st.container(border=True):
                 st.subheader(f"📌 {tool['name']}")
-                if tool.get("desc"):
-                    st.write(tool["desc"])
                 st.link_button(f"Open {tool['name']} 🚀", tool["url"])
 
                 # Admin-only Edit & Delete Options
