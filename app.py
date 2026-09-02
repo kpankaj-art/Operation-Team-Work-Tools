@@ -4,15 +4,15 @@ import os
 
 st.set_page_config(page_title="Utility Tools Portal", layout="wide")
 
-# Custom CSS to reduce top padding and space
+# CSS fix to adjust top spacing properly without hiding text
 st.markdown("""
     <style>
         .block-container {
-            padding-top: 1.5rem !important;
+            padding-top: 3.5rem !important;
             padding-bottom: 0rem !important;
         }
         .custom-title {
-            font-size: 20px !important;
+            font-size: 22px !important;
             font-weight: 600;
             margin-bottom: 2px;
         }
