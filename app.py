@@ -32,6 +32,9 @@ if "tools_list" not in st.session_state:
 if "is_logged_in" not in st.session_state:
     st.session_state.is_logged_in = False
 
+if "editing_index" not in st.session_state:
+    st.session_state.editing_index = None
+
 st.title("🛠️ Utility Tools Dashboard")
 st.write("Access all internal utility tools in one place.")
 
@@ -53,30 +56,63 @@ else:
     st.sidebar.success(f"Welcome, {VALID_USER_ID}!")
     if st.sidebar.button("Logout"):
         st.session_state.is_logged_in = False
+        st.session_state.editing_index = None
         st.rerun()
 
-    st.sidebar.subheader("➕ Add New Tool Link")
+    # --- ADD OR EDIT FORM ---
+    if st.session_state.editing_index is not None:
+        st.sidebar.subheader("✏️ Edit Tool")
+        edit_idx = st.session_state.editing_index
+        current_tool = st.session_state.tools_list[edit_idx]
 
-    with st.sidebar.form("add_tool_form", clear_on_submit=True):
-        tool_name = st.text_input("Tool Name:")
-        tool_url = st.text_input("Tool URL:")
-        tool_desc = st.text_area("Description (What this tool does):")
-        
-        submit_button = st.form_submit_button("Add to Dashboard")
+        with st.sidebar.form("edit_tool_form"):
+            tool_name = st.text_input("Tool Name:", value=current_tool["name"])
+            tool_url = st.text_input("Tool URL:", value=current_tool["url"])
+            tool_desc = st.text_area("Description:", value=current_tool["desc"])
+            
+            update_button = st.form_submit_button("Update Tool")
 
-        if submit_button:
-            if tool_name and tool_url:
-                new_tool = {
-                    "name": tool_name,
-                    "url": tool_url,
-                    "desc": tool_desc if tool_desc else "No description provided."
-                }
-                st.session_state.tools_list.append(new_tool)
-                save_tools(st.session_state.tools_list)
-                st.sidebar.success(f"'{tool_name}' added to dashboard!")
-                st.rerun()
-            else:
-                st.sidebar.error("Please fill in both Name and URL fields!")
+            if update_button:
+                if tool_name and tool_url:
+                    st.session_state.tools_list[edit_idx] = {
+                        "name": tool_name,
+                        "url": tool_url,
+                        "desc": tool_desc if tool_desc else "No description provided."
+                    }
+                    save_tools(st.session_state.tools_list)
+                    st.session_state.editing_index = None
+                    st.sidebar.success(f"'{tool_name}' updated successfully!")
+                    st.rerun()
+                else:
+                    st.sidebar.error("Please fill in both Name and URL fields!")
+
+        if st.sidebar.button("Cancel Edit"):
+            st.session_state.editing_index = None
+            st.rerun()
+
+    else:
+        st.sidebar.subheader("➕ Add New Tool Link")
+
+        with st.sidebar.form("add_tool_form", clear_on_submit=True):
+            tool_name = st.text_input("Tool Name:")
+            tool_url = st.text_input("Tool URL:")
+            tool_desc = st.text_area("Description (What this tool does):")
+            
+            submit_button = st.form_submit_button("Add to Dashboard")
+
+            if submit_button:
+                if tool_name and tool_url:
+                    new_tool = {
+                        "name": tool_name,
+                        "url": tool_url,
+                        "desc": tool_desc if tool_desc else "No description provided."
+                    }
+                    st.session_state.tools_list.append(new_tool)
+                    save_tools(st.session_state.tools_list)
+                    st.sidebar.success(f"'{tool_name}' added to dashboard!")
+                    st.rerun()
+                else:
+                    st.sidebar.error("Please fill in both Name and URL fields!")
 
 # --- MAIN DASHBOARD DISPLAY ---
 st.divider()
@@ -92,3 +128,21 @@ else:
                 st.subheader(f"📌 {tool['name']}")
                 st.write(f"**Description:** {tool['desc']}")
                 st.link_button(f"Open {tool['name']} 🚀", tool['url'])
+
+                # Admin-only Edit & Delete Options
+                if st.session_state.is_logged_in:
+                    st.divider()
+                    btn_col1, btn_col2 = st.columns(2)
+                    
+                    with btn_col1:
+                        if st.button("✏️ Edit", key=f"edit_{index}"):
+                            st.session_state.editing_index = index
+                            st.rerun()
+                            
+                    with btn_col2:
+                        if st.button("🗑️ Delete", key=f"del_{index}"):
+                            st.session_state.tools_list.pop(index)
+                            save_tools(st.session_state.tools_list)
+                            if st.session_state.editing_index == index:
+                                st.session_state.editing_index = None
+                            st.rerun()
