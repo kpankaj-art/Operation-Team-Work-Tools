@@ -35,8 +35,9 @@ if "is_logged_in" not in st.session_state:
 if "editing_index" not in st.session_state:
     st.session_state.editing_index = None
 
-st.title("🛠️ Utility Tools Dashboard")
-st.write("Access all internal utility tools in one place.")
+# Compact Title Header
+st.markdown("### 🛠️ Utility Tools Dashboard")
+st.caption("Access all internal utility tools in one place.")
 
 # --- SIDEBAR: Login & Admin Controls ---
 st.sidebar.header("🔒 Admin Panel")
@@ -68,7 +69,7 @@ else:
         with st.sidebar.form("edit_tool_form"):
             tool_name = st.text_input("Tool Name:", value=current_tool["name"])
             tool_url = st.text_input("Tool URL:", value=current_tool["url"])
-            tool_desc = st.text_area("Description:", value=current_tool["desc"])
+            tool_desc = st.text_area("Details:", value=current_tool.get("desc", ""))
             
             update_button = st.form_submit_button("Update Tool")
 
@@ -77,7 +78,7 @@ else:
                     st.session_state.tools_list[edit_idx] = {
                         "name": tool_name,
                         "url": tool_url,
-                        "desc": tool_desc if tool_desc else "No description provided."
+                        "desc": tool_desc
                     }
                     save_tools(st.session_state.tools_list)
                     st.session_state.editing_index = None
@@ -96,7 +97,7 @@ else:
         with st.sidebar.form("add_tool_form", clear_on_submit=True):
             tool_name = st.text_input("Tool Name:")
             tool_url = st.text_input("Tool URL:")
-            tool_desc = st.text_area("Description (What this tool does):")
+            tool_desc = st.text_area("Details:")
             
             submit_button = st.form_submit_button("Add to Dashboard")
 
@@ -105,7 +106,7 @@ else:
                     new_tool = {
                         "name": tool_name,
                         "url": tool_url,
-                        "desc": tool_desc if tool_desc else "No description provided."
+                        "desc": tool_desc
                     }
                     st.session_state.tools_list.append(new_tool)
                     save_tools(st.session_state.tools_list)
@@ -126,8 +127,9 @@ else:
         with col:
             with st.container(border=True):
                 st.subheader(f"📌 {tool['name']}")
-                st.write(f"**Description:** {tool['desc']}")
-                st.link_button(f"Open {tool['name']} 🚀", tool['url'])
+                if tool.get("desc"):
+                    st.write(tool["desc"])
+                st.link_button(f"Open {tool['name']} 🚀", tool["url"])
 
                 # Admin-only Edit & Delete Options
                 if st.session_state.is_logged_in:
