@@ -90,12 +90,12 @@ if "editing_index" not in st.session_state:
     st.session_state.editing_index = None
 
 # Compact & Low-Space Header
-st.markdown('<div class="custom-title">🛠️ Utility Tools Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="custom-title">Utility Tools Dashboard</div>', unsafe_allow_html=True)
 st.markdown('<div class="custom-sub">Access all internal utility tools in one place.</div>', unsafe_allow_html=True)
 st.divider()
 
 # --- SIDEBAR: Login & Admin Controls ---
-st.sidebar.header("🔒 Admin Panel")
+st.sidebar.header("Admin Panel")
 
 if not st.session_state.is_logged_in:
     user_id_input = st.sidebar.text_input("User ID")
@@ -117,7 +117,7 @@ else:
 
     # --- ADD OR EDIT FORM ---
     if st.session_state.editing_index is not None:
-        st.sidebar.subheader("✏️ Edit Tool")
+        st.sidebar.subheader("Edit Tool")
         edit_idx = st.session_state.editing_index
         current_tool = st.session_state.tools_list[edit_idx]
 
@@ -147,7 +147,7 @@ else:
             st.rerun()
 
     else:
-        st.sidebar.subheader("➕ Add New Tool Link")
+        st.sidebar.subheader("Add New Tool Link")
 
         with st.sidebar.form("add_tool_form", clear_on_submit=True):
             tool_name = st.text_input("Tool Name:")
@@ -182,8 +182,8 @@ else:
         col = cols[index % 2]
         with col:
             with st.container(border=True):
-                st.subheader(f"📌 {tool['name']}")
-                st.link_button(f"Open {tool['name']} 🚀", tool["url"])
+                st.subheader(f"{tool['name']}")
+                st.link_button(f"Open {tool['name']} ", tool["url"])
 
                 # Admin-only Edit & Delete Options
                 if st.session_state.is_logged_in:
@@ -191,12 +191,12 @@ else:
                     btn_col1, btn_col2 = st.columns(2)
                     
                     with btn_col1:
-                        if st.button("✏️ Edit", key=f"edit_{index}"):
+                        if st.button("Edit", key=f"edit_{index}"):
                             st.session_state.editing_index = index
                             st.rerun()
                             
                     with btn_col2:
-                        if st.button("🗑️ Delete", key=f"del_{index}"):
+                        if st.button("Delete", key=f"del_{index}"):
                             deleted_name = st.session_state.tools_list[index]['name']
                             temp_list = st.session_state.tools_list.copy()
                             temp_list.pop(index)
