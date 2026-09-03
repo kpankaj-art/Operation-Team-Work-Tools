@@ -1,10 +1,11 @@
 import streamlit as st
 import json
-import os
+import requests
+import base64
 
 st.set_page_config(page_title="Utility Tools Portal", layout="wide")
 
-# CSS fix to adjust top spacing properly without hiding text
+# Custom CSS for compact spacing
 st.markdown("""
     <style>
         .block-container {
@@ -28,26 +29,59 @@ st.markdown("""
 VALID_USER_ID = "VMPL"
 VALID_PASSWORD = "VMPL@123"
 
-DATA_FILE = "tools_data.json"
+# GitHub Secrets
+GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
+GITHUB_REPO = st.secrets.get("GITHUB_REPO", "") # Format: "username/repo_name"
+FILE_PATH = "tools_data.json"
 
-# Function to load stored tools from JSON file
-def load_tools():
-    if os.path.exists(DATA_FILE):
+# Helper function to fetch tools directly from GitHub
+def load_tools_from_github():
+    if not GITHUB_TOKEN or not GITHUB_REPO:
+        return []
+    
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+    
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        content = response.json()
+        file_content = base64.b64decode(content["content"]).decode("utf-8")
         try:
-            with open(DATA_FILE, "r") as f:
-                return json.load(f)
+            return json.loads(file_content)
         except Exception:
             return []
     return []
 
-# Function to save tools to JSON file
-def save_tools(tools):
-    with open(DATA_FILE, "w") as f:
-        json.dump(tools, f, indent=4)
+# Helper function to save tools directly to GitHub Repository
+def save_tools_to_github(tools_data, commit_message):
+    if not GITHUB_TOKEN or not GITHUB_REPO:
+        st.error("GitHub Secrets missing! Please set GITHUB_TOKEN and GITHUB_REPO in Streamlit Cloud Secrets.")
+        return False
+
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    # Get file SHA for update
+    get_response = requests.get(url, headers=headers)
+    sha = get_response.json().get("sha", "") if get_response.status_code == 200 else None
+
+    # Prepare JSON payload
+    updated_content = json.dumps(tools_data, indent=4)
+    encoded_content = base64.b64encode(updated_content.encode("utf-8")).decode("utf-8")
+
+    payload = {
+        "message": commit_message,
+        "content": encoded_content
+    }
+    if sha:
+        payload["sha"] = sha
+
+    put_response = requests.put(url, headers=headers, json=payload)
+    return put_response.status_code in [200, 201]
 
 # Initialize Session State
 if "tools_list" not in st.session_state:
-    st.session_state.tools_list = load_tools()
+    st.session_state.tools_list = load_tools_from_github()
 
 if "is_logged_in" not in st.session_state:
     st.session_state.is_logged_in = False
@@ -83,7 +117,7 @@ else:
 
     # --- ADD OR EDIT FORM ---
     if st.session_state.editing_index is not None:
-        st.sidebar.subheader(" Edit Tool")
+        st.sidebar.subheader("✏️ Edit Tool")
         edit_idx = st.session_state.editing_index
         current_tool = st.session_state.tools_list[edit_idx]
 
@@ -99,10 +133,12 @@ else:
                         "name": tool_name,
                         "url": tool_url
                     }
-                    save_tools(st.session_state.tools_list)
-                    st.session_state.editing_index = None
-                    st.sidebar.success(f"'{tool_name}' updated successfully!")
-                    st.rerun()
+                    if save_tools_to_github(st.session_state.tools_list, f"Updated tool: {tool_name}"):
+                        st.session_state.editing_index = None
+                        st.sidebar.success(f"'{tool_name}' updated permanently!")
+                        st.rerun()
+                    else:
+                        st.sidebar.error("Failed to save changes to GitHub!")
                 else:
                     st.sidebar.error("Please fill in both Name and URL fields!")
 
@@ -111,7 +147,7 @@ else:
             st.rerun()
 
     else:
-        st.sidebar.subheader(" Add New Tool Link")
+        st.sidebar.subheader("➕ Add New Tool Link")
 
         with st.sidebar.form("add_tool_form", clear_on_submit=True):
             tool_name = st.text_input("Tool Name:")
@@ -125,10 +161,15 @@ else:
                         "name": tool_name,
                         "url": tool_url
                     }
-                    st.session_state.tools_list.append(new_tool)
-                    save_tools(st.session_state.tools_list)
-                    st.sidebar.success(f"'{tool_name}' added to dashboard!")
-                    st.rerun()
+                    temp_list = st.session_state.tools_list.copy()
+                    temp_list.append(new_tool)
+                    
+                    if save_tools_to_github(temp_list, f"Added tool: {tool_name}"):
+                        st.session_state.tools_list = temp_list
+                        st.sidebar.success(f"'{tool_name}' added permanently to dashboard!")
+                        st.rerun()
+                    else:
+                        st.sidebar.error("Failed to save link to GitHub!")
                 else:
                     st.sidebar.error("Please fill in both Name and URL fields!")
 
@@ -141,8 +182,8 @@ else:
         col = cols[index % 2]
         with col:
             with st.container(border=True):
-                st.subheader(f" {tool['name']}")
-                st.link_button(f"Open {tool['name']} ", tool["url"])
+                st.subheader(f"📌 {tool['name']}")
+                st.link_button(f"Open {tool['name']} 🚀", tool["url"])
 
                 # Admin-only Edit & Delete Options
                 if st.session_state.is_logged_in:
@@ -150,14 +191,20 @@ else:
                     btn_col1, btn_col2 = st.columns(2)
                     
                     with btn_col1:
-                        if st.button(" Edit", key=f"edit_{index}"):
+                        if st.button("✏️ Edit", key=f"edit_{index}"):
                             st.session_state.editing_index = index
                             st.rerun()
                             
                     with btn_col2:
-                        if st.button(" Delete", key=f"del_{index}"):
-                            st.session_state.tools_list.pop(index)
-                            save_tools(st.session_state.tools_list)
-                            if st.session_state.editing_index == index:
-                                st.session_state.editing_index = None
-                            st.rerun()
+                        if st.button("🗑️ Delete", key=f"del_{index}"):
+                            deleted_name = st.session_state.tools_list[index]['name']
+                            temp_list = st.session_state.tools_list.copy()
+                            temp_list.pop(index)
+                            
+                            if save_tools_to_github(temp_list, f"Deleted tool: {deleted_name}"):
+                                st.session_state.tools_list = temp_list
+                                if st.session_state.editing_index == index:
+                                    st.session_state.editing_index = None
+                                st.rerun()
+                            else:
+                                st.error("Failed to delete tool from GitHub!")
