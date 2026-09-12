@@ -22,5 +22,9 @@
     {
         "name": "Transfer SAP Code and/or Brand from Excel to PowerPoint",
         "url": "https://exceltopptsapcodeautotransfer-6f53abub59jjcqwutp4kl7.streamlit.app/"
+    },
+    {
+        "name": "PPT \u2192 Excel Client Remark Extractor",
+        "url": "https://client-approval-remark-ppt-to-excel-xmu4mtoddqt3zxf3fo8x5e.streamlit.app/"
     }
 ]
